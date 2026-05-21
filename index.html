@@ -1,0 +1,1657 @@
+ <!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>KOR Prayer Manager (Unified)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<style>
+
+
+
+    /* This rule applies ONLY to Mobile/Tablets */
+    @media (max-width: 1023px) {
+        body {
+            zoom: 100%; 
+            width: 100vw !important;
+            min-height: 100vh !important;
+            margin: 0;
+            overflow-x: hidden;
+        }
+    }
+
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  /* ============================
+     THEME: Editorial Warm (spiritual tone)
+     ============================ */
+  :root {
+    --bg-app:            #0b0d14;                         /* warm deep navy-charcoal */
+    --bg-deep:           #070810;
+    --surface-1:         rgba(28, 26, 36, 0.55);          /* glass panel fill */
+    --surface-2:         rgba(20, 18, 28, 0.7);           /* input / nested fill */
+    --surface-hover:     rgba(201, 168, 76, 0.04);
+
+    --panel-border:      rgba(201, 168, 76, 0.09);
+    --panel-border-hi:   rgba(201, 168, 76, 0.22);
+    --divider:           rgba(255, 255, 255, 0.05);
+
+    --gold:              #c9a84c;
+    --gold-hi:           #d8b959;
+    --gold-dim:          #7a5e28;
+    --gold-soft:         rgba(201, 168, 76, 0.12);
+    --gold-glow:         rgba(201, 168, 76, 0.22);
+
+    --primary:           #c9a84c;                         /* gold primary actions */
+    --primary-hover:     #d8b959;
+    --on-primary:        #1a1408;
+
+    --text-main:         #ede8de;
+    --text-secondary:    #a8a296;
+    --text-muted:        #756f63;
+    --text-faint:        #4a473f;
+
+    --status-prayer:     #8aa9d4;                         /* cool blue */
+    --status-cont:       #8dc49a;                         /* soft green */
+    --status-follow:     #d4b659;                         /* amber */
+    --status-ans:        #c894d4;                         /* orchid */
+
+    --font-display:      'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --font-ui:           'DM Sans', 'Inter', system-ui, sans-serif;
+  }
+
+  * { -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: var(--font-ui);
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse 70% 50% at 50% -5%, rgba(201,168,76,0.05), transparent 65%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ============================
+     DISPLAY TYPE (serif, editorial)
+     ============================ */
+  .display {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    line-height: 1.15;
+    color: var(--text-main);
+  }
+  .display.h1 { font-size: clamp(1.9rem, 3.5vw, 2.6rem); font-weight: 500; }
+  .display.h2 { font-size: 1.65rem; font-weight: 500; }
+  .display.h3 { font-size: 1.2rem; font-weight: 600; }
+
+  .eyebrow {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  /* ============================
+     GLASS PANEL
+     ============================ */
+  .glass-panel {
+    background: var(--surface-1);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--panel-border);
+    border-radius: 0.85rem;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.02) inset, 0 8px 28px -14px rgba(0,0,0,0.5);
+    position: relative;
+  }
+
+  /* ============================
+     INPUTS
+     ============================ */
+  input, textarea, select {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--panel-border);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    padding: 0.6rem 0.9rem;
+    border-radius: 0.45rem;
+    outline: none;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  input::placeholder, textarea::placeholder {
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  input:hover, textarea:hover, select:hover {
+    border-color: var(--panel-border-hi);
+    background: rgba(20, 18, 28, 0.85);
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--gold);
+    background: rgba(20, 18, 28, 0.95);
+    box-shadow: 0 0 0 3px var(--gold-soft);
+  }
+  textarea {
+    resize: vertical;
+    min-height: 76px;
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+  }
+  input.text-sm, textarea.text-sm {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.8rem;
+  }
+  textarea.text-sm { padding-top: 0.55rem; padding-bottom: 0.55rem; }
+  select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a8a296' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+    padding-right: 2.25rem;
+    cursor: pointer;
+  }
+  input:-webkit-autofill, textarea:-webkit-autofill {
+    -webkit-text-fill-color: var(--text-main);
+    -webkit-box-shadow: 0 0 0 1000px var(--surface-2) inset;
+    caret-color: var(--text-main);
+  }
+
+  label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    margin-bottom: 0.45rem;
+    margin-top: 1rem;
+  }
+
+  /* ============================
+     BUTTONS
+     ============================ */
+  .btn-primary {
+    background: var(--primary);
+    color: var(--on-primary);
+    font-family: var(--font-ui);
+    font-weight: 600;
+    padding: 0.6rem 1.4rem;
+    font-size: 0.88rem;
+    border-radius: 0.45rem;
+    transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.2s ease;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+    box-shadow: 0 6px 16px -8px var(--gold-glow);
+  }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-primary:active { transform: scale(0.98); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 500;
+    padding: 0.6rem 1.4rem;
+    font-size: 0.88rem;
+    border: 1px solid var(--panel-border-hi);
+    border-radius: 0.45rem;
+    transition: all 0.15s ease;
+  }
+  .btn-secondary:hover {
+    color: var(--text-main);
+    border-color: var(--gold-dim);
+    background: var(--gold-soft);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 500;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.83rem;
+    border-radius: 0.4rem;
+    transition: all 0.15s ease;
+  }
+  .btn-ghost:hover { color: var(--text-main); background: var(--surface-hover); }
+
+  /* ============================
+     TOP NAV
+     ============================ */
+  .topnav {
+    position: sticky; top: 0; z-index: 30;
+    background: rgba(11, 13, 20, 0.85);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--panel-border);
+    padding: 0.9rem 1.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 0.75rem;
+  }
+  .brand-title {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-main);
+  }
+  .brand-subtitle {
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    display: block;
+    margin-top: -2px;
+  }
+  .sync-dot {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+  .sync-dot::before {
+    content: ""; width: 6px; height: 6px; border-radius: 999px;
+    background: var(--status-cont);
+    box-shadow: 0 0 10px var(--status-cont);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; } 50% { opacity: 1; }
+  }
+
+  /* ============================
+     PAGE HERO
+     ============================ */
+  .page-hero {
+    padding: 2.5rem 0 2rem;
+    border-bottom: 1px solid var(--divider);
+    margin-bottom: 2rem;
+  }
+
+  /* ============================
+     STATS ROW
+     ============================ */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: var(--surface-1);
+    border: 1px solid var(--panel-border);
+    border-radius: 0.75rem;
+    padding: 1rem 1.2rem;
+    display: flex; flex-direction: column; gap: 0.25rem;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+    cursor: default;
+  }
+  .stat-card .stat-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+  }
+  .stat-card .stat-value {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 500;
+    color: var(--text-main);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-card .stat-accent {
+    width: 28px; height: 2px;
+    background: var(--stat-color, var(--gold));
+    border-radius: 2px;
+    margin-top: 0.4rem;
+  }
+  .stat-card[data-tone="total"]    { --stat-color: var(--gold); }
+  .stat-card[data-tone="prayer"]   { --stat-color: var(--status-prayer); }
+  .stat-card[data-tone="cont"]     { --stat-color: var(--status-cont); }
+  .stat-card[data-tone="follow"]   { --stat-color: var(--status-follow); }
+  .stat-card[data-tone="answered"] { --stat-color: var(--status-ans); }
+
+  /* ============================
+     LIST (records)
+     ============================ */
+  .list-header {
+    display: none;
+    grid-template-columns: 48px 1.3fr 1fr 1fr 2.2fr 88px;
+    gap: 1rem;
+    padding: 0.9rem 1.2rem;
+    border-bottom: 1px solid var(--divider);
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .list-row {
+    display: flex;
+    flex-direction: column;
+    padding: 1.2rem 1.2rem 1.2rem 1.5rem;
+    border-bottom: 1px solid var(--divider);
+    gap: 0.75rem;
+    position: relative;
+    transition: background-color 0.15s ease;
+  }
+  .list-row:last-child { border-bottom: 0; }
+  .list-row:hover { background: var(--surface-hover); }
+  /* Vertical status accent strip on the left */
+  .list-row::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 14px; bottom: 14px;
+    width: 3px;
+    background: var(--row-accent, var(--text-faint));
+    border-radius: 0 2px 2px 0;
+    opacity: 0.7;
+  }
+  .list-row[data-status="prayer"]   { --row-accent: var(--status-prayer); }
+  .list-row[data-status="cont"]     { --row-accent: var(--status-cont); }
+  .list-row[data-status="follow"]   { --row-accent: var(--status-follow); }
+  .list-row[data-status="answered"] { --row-accent: var(--status-ans); }
+
+  @media (min-width: 1024px) {
+    .list-header { display: grid; }
+    .list-row {
+      display: grid;
+      grid-template-columns: 48px 1.3fr 1fr 1fr 2.2fr 88px;
+      align-items: start;
+      gap: 1rem;
+      padding: 1.1rem 1.2rem 1.1rem 1.5rem;
+    }
+    .col-status-desktop { display: block; }
+    .mobile-meta-row { display: none !important; }
+  }
+  @media (max-width: 1023px) {
+    .list-header { display: none; }
+    .col-status-desktop { display: none; }
+    .mobile-meta-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.5rem; }
+    .mobile-notes { margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-secondary); }
+  }
+
+  .record-name {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--text-main);
+    letter-spacing: -0.005em;
+  }
+  .record-meta {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+    letter-spacing: 0.02em;
+  }
+
+  .avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--gold-soft);
+    border: 1px solid var(--panel-border-hi);
+    display: grid; place-items: center;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--gold);
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+  }
+
+  /* ============================
+     NOTES CELL
+     ============================ */
+  .notes-cell {
+    position: relative;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  .notes-text {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+  }
+  .notes-cell[data-truncated="true"]:not([data-expanded="true"]) .notes-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .notes-empty {
+    color: var(--text-faint);
+    font-style: italic;
+    font-size: 0.82rem;
+  }
+  .notes-toggle {
+    margin-top: 0.5rem;
+    background: none; border: none;
+    color: var(--gold);
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer; padding: 0;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    transition: color .15s ease;
+  }
+  .notes-toggle:hover { color: var(--gold-hi); }
+  .notes-toggle::before {
+    content: "";
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid currentColor;
+    transition: transform .15s ease;
+  }
+  .notes-cell[data-expanded="true"] .notes-toggle::before { transform: rotate(180deg); }
+
+  /* ============================
+     STATUS PILL
+     ============================ */
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    font-family: var(--font-ui);
+  }
+  .pill::before {
+    content: ""; width: 6px; height: 6px; border-radius: 999px;
+    background: currentColor; opacity: 0.9;
+  }
+  .pill-prayer { background: rgba(138,169,212,0.12); color: var(--status-prayer); border-color: rgba(138,169,212,0.25); }
+  .pill-cont   { background: rgba(141,196,154,0.12); color: var(--status-cont);   border-color: rgba(141,196,154,0.25); }
+  .pill-follow { background: rgba(212,182,89,0.12);  color: var(--status-follow); border-color: rgba(212,182,89,0.28); }
+  .pill-ans    { background: rgba(200,148,212,0.12); color: var(--status-ans);    border-color: rgba(200,148,212,0.25); }
+
+  /* ============================
+     ROW ACTIONS (Edit / Archive)
+     ============================ */
+  .row-action {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 0.4rem;
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all .15s ease;
+  }
+  .row-action:hover { background: var(--gold-soft); color: var(--text-main); border-color: var(--gold-dim); }
+  .row-action.danger { color: #d48a8a; border-color: rgba(212,138,138,0.2); }
+  .row-action.danger:hover { background: rgba(212,138,138,0.1); color: #e4a8a8; border-color: rgba(212,138,138,0.4); }
+
+  /* ============================
+     FORM SECTIONS
+     ============================ */
+  .form-section + .form-section {
+    margin-top: 1.75rem; padding-top: 1.75rem;
+    border-top: 1px solid var(--divider);
+  }
+  .form-section-title {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1rem;
+  }
+
+  /* ============================
+     CHIP SELECTOR (status in entry form)
+     ============================ */
+  .chip-group {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+  }
+  .chip {
+    padding: 0.45rem 0.95rem;
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+  }
+  .chip::before {
+    content: ""; width: 6px; height: 6px; border-radius: 999px;
+    background: var(--chip-color, var(--text-faint));
+    opacity: 0.6;
+    transition: opacity 0.15s ease;
+  }
+  .chip:hover {
+    border-color: var(--panel-border-hi);
+    color: var(--text-main);
+  }
+  .chip.active {
+    background: var(--chip-soft, var(--gold-soft));
+    border-color: var(--chip-color, var(--gold));
+    color: var(--chip-text, var(--text-main));
+  }
+  .chip.active::before { opacity: 1; }
+  .chip[data-val="In Prayer"]             { --chip-color: var(--status-prayer); --chip-soft: rgba(138,169,212,0.1); --chip-text: #b4ccea; }
+  .chip[data-val="Continuing"]            { --chip-color: var(--status-cont);   --chip-soft: rgba(141,196,154,0.1); --chip-text: #b4dcc0; }
+  .chip[data-val="Follow-up Needed"]      { --chip-color: var(--status-follow); --chip-soft: rgba(212,182,89,0.1);  --chip-text: #e4ce88; }
+  .chip[data-val="Answered / Testimony"]  { --chip-color: var(--status-ans);    --chip-soft: rgba(200,148,212,0.1); --chip-text: #dcb8e4; }
+  #pStatus { display: none !important; }
+
+  /* ============================
+     SEARCH BOX
+     ============================ */
+  .search-box {
+    position: relative;
+    flex: 1;
+    min-width: 180px;
+    max-width: 320px;
+  }
+  .search-box input { padding-left: 2.4rem; }
+  .search-box::before {
+    content: "";
+    position: absolute;
+    left: 0.85rem; top: 50%;
+    transform: translateY(-50%);
+    width: 15px; height: 15px;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a8a296' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><path d='m21 21-4.35-4.35'/></svg>") no-repeat center;
+    pointer-events: none;
+  }
+
+  /* ============================
+     TOAST
+     ============================ */
+  .toast-container {
+    position: fixed;
+    bottom: 24px; left: 24px;
+    z-index: 80;
+    display: flex; flex-direction: column-reverse; gap: 8px;
+    pointer-events: none;
+    max-width: calc(100vw - 48px);
+  }
+  .toast {
+    background: rgba(20, 18, 28, 0.96);
+    backdrop-filter: blur(12px);
+    color: var(--text-main);
+    padding: 0.75rem 1.1rem 0.75rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--panel-border-hi);
+    border-left: 3px solid var(--toast-color, var(--gold));
+    box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7);
+    font-size: 0.85rem;
+    min-width: 240px; max-width: 360px;
+    pointer-events: auto;
+    animation: toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .toast[data-kind="success"] { --toast-color: var(--status-cont); }
+  .toast[data-kind="error"]   { --toast-color: #d48a8a; }
+  .toast[data-kind="info"]    { --toast-color: var(--gold); }
+  .toast.leaving { animation: toast-out 0.25s ease forwards; }
+  @keyframes toast-in  { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes toast-out { from { transform: translateY(0); opacity: 1; } to { transform: translateY(14px); opacity: 0; } }
+
+  /* ============================
+     SKELETON LOADER
+     ============================ */
+  .skeleton-row {
+    display: grid;
+    grid-template-columns: 48px 1.3fr 1fr 1fr 2.2fr 88px;
+    gap: 1rem;
+    padding: 1.1rem 1.2rem 1.1rem 1.5rem;
+    border-bottom: 1px solid var(--divider);
+    align-items: center;
+  }
+  .skeleton {
+    background: linear-gradient(90deg, rgba(201,168,76,0.04), rgba(201,168,76,0.11), rgba(201,168,76,0.04));
+    background-size: 200% 100%;
+    border-radius: 0.3rem;
+    height: 12px;
+    animation: sk-shimmer 1.6s ease-in-out infinite;
+  }
+  .skeleton.circle { border-radius: 999px; width: 40px; height: 40px; }
+  .skeleton.tall   { height: 16px; }
+  @keyframes sk-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  @media (max-width: 1023px) {
+    .skeleton-row { grid-template-columns: 40px 1fr; }
+    .skeleton-row > *:nth-child(n+3) { display: none; }
+  }
+
+  /* ============================
+     EMPTY STATE
+     ============================ */
+  .empty-state {
+    padding: 3rem 2rem;
+    text-align: center;
+    color: var(--text-muted);
+  }
+  .empty-state .display {
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+  }
+  .empty-state p { font-size: 0.9rem; }
+
+  /* ============================
+     SECTION HEADINGS
+     ============================ */
+  .section-heading {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 1.25rem; margin-bottom: 1.25rem; flex-wrap: wrap;
+  }
+  .section-heading h2 { margin: 0; }
+  .section-heading p { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem; max-width: 44ch; }
+
+  /* ============================
+     LOGIN & LOGO STYLES
+     ============================ */
+  @keyframes korPulse{
+    0%{transform:scale(1);box-shadow:0 0 0 rgba(201,168,76,0)}
+    50%{transform:scale(1.05);box-shadow:0 0 22px rgba(201,168,76,.4)}
+    100%{transform:scale(1);box-shadow:0 0 0 rgba(201,168,76,0)}
+  }
+  .korLogo {
+    width:64px;
+    height:64px; border-radius:18px;
+    background: linear-gradient(135deg, #d8b959, #a8884a);
+    display:grid; place-items:center;
+    box-shadow: 0 10px 24px -8px rgba(201,168,76,0.35);
+    border:1px solid rgba(237, 213, 140, 0.5);
+    animation: korPulse 3s ease-in-out infinite;
+    margin: 0 auto 1.5rem auto;
+  }
+  .korLogo-header {
+    width: 38px;
+    height: 38px; border-radius: 11px;
+    background: linear-gradient(135deg, #d8b959, #a8884a);
+    display:grid; place-items:center;
+    box-shadow: 0 4px 10px -2px rgba(201,168,76,0.3);
+    border:1px solid rgba(237, 213, 140, 0.4);
+  }
+
+  .login-glass {
+    background: rgba(20, 18, 28, 0.92);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--panel-border-hi);
+    border-radius: 1.5rem;
+  }
+
+  /* ============================
+     FLOATING GEAR MENU
+     ============================ */
+  .fab-gear {
+    position: fixed;
+    bottom: 30px; right: 30px;
+    width: 56px; height: 56px;
+    background: var(--primary); color: #000;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    cursor: pointer; z-index: 50;
+    transition: transform 0.3s;
+  }
+  .fab-gear:hover { transform: rotate(45deg); }
+  
+  .gear-menu {
+    position: fixed; bottom: 100px; right: 30px;
+    width: 280px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    z-index: 49;
+    transform: translateY(20px);
+    opacity: 0; pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  }
+  .gear-menu.active {
+    transform: translateY(0); opacity: 1; pointer-events: auto;
+  }
+
+  /* ============================
+     SCREENS / VIEWS
+     ============================ */
+  #dashboardView, #entryView { transition: opacity 0.3s ease; }
+  .hidden-view { display: none !important; opacity: 0; }
+
+</style>
+</head>
+<body class="antialiased min-h-screen">
+
+
+<div id="loginOverlay" class="fixed inset-0 z-[100] flex items-center justify-center p-6" style="background: rgba(7, 8, 16, 0.92); backdrop-filter: blur(8px);">
+  <div class="w-full max-w-md login-glass shadow-2xl p-8 md:p-10">
+    <div class="text-center mb-8">
+      <div class="korLogo">
+        <img src="https://lh3.googleusercontent.com/d/1iLMCP2wh8e4BdxM_rds3W1GxkX0LVUqi=s220" class="w-10 h-10 rounded-lg" alt="KOR" />
+      </div>
+      <span class="eyebrow" style="display:block; margin-bottom: 0.5rem;">KOR Ministry</span>
+      <h1 class="display h2" style="letter-spacing: -0.01em;">Prayer Manager</h1>
+      <p class="mt-2" style="font-size: 0.85rem; color: var(--text-muted);">Sign in to tend to the prayer list.</p>
+    </div>
+
+    <div class="space-y-4">
+      <div>
+        <label class="!mt-0 !mb-2">Email</label>
+        <input id="lgEmail" type="email" placeholder="you@ministry.org" autocomplete="username" />
+      </div>
+
+      <div>
+        <label class="!mt-0 !mb-2">Password</label>
+        <div class="relative">
+          <input id="lgPass" type="password" placeholder="••••••••" autocomplete="current-password" style="padding-right: 3rem;" />
+          <button type="button" onclick="const p=document.getElementById('lgPass'); p.type = (p.type==='password') ? 'text' : 'password';" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-200 focus:outline-none" style="background: transparent; border: none;" aria-label="Toggle password visibility">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div id="lgStatus" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium" style="background: var(--surface-2); border: 1px solid var(--panel-border); color: var(--text-secondary);">
+         <span id="lgStatusTxt">Ready to connect</span>
+         <span class="w-2 h-2 rounded-full" id="lgDot" style="background: var(--text-faint);"></span>
+      </div>
+
+      <button id="lgBtn" type="button" class="btn-primary w-full mt-2" style="padding: 0.85rem 1.5rem; font-size: 0.95rem;">
+        Sign in
+      </button>
+
+      <div class="text-center mt-3">
+        <button onclick="window.resetUserPassword()" class="text-xs underline bg-transparent border-none cursor-pointer" style="color: var(--text-muted);">Forgot password?</button>
+      </div>
+    </div>
+
+    <p class="text-center mt-8" style="font-size: 0.65rem; color: var(--text-faint); letter-spacing: 0.18em; text-transform: uppercase;">
+      © KOR Management System
+    </p>
+  </div>
+</div>
+
+<div id="app" style="display:none;" class="pb-32">
+  <nav class="topnav">
+    <div class="brand">
+      <div class="korLogo-header">
+        <img src="https://lh3.googleusercontent.com/d/1iLMCP2wh8e4BdxM_rds3W1GxkX0LVUqi=s220" class="w-6 h-6 rounded-md" alt="KOR" />
+      </div>
+      <div>
+        <span class="brand-subtitle">KOR Ministry</span>
+        <span class="brand-title">Prayer Manager</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-5">
+      <span class="sync-dot hidden md:inline-flex">Live · Firestore</span>
+      <span class="text-xs font-mono text-slate-500 hidden md:inline" id="entryStamp"></span>
+      <button id="logoutBtn" class="btn-ghost">Sign out</button>
+    </div>
+  </nav>
+
+  <div class="max-w-6xl mx-auto px-5 pb-20 relative" style="z-index:1;">
+    <div id="dashboardView">
+
+      <!-- PAGE HERO -->
+      <div class="page-hero">
+        <span class="eyebrow">The Book of Requests</span>
+        <h1 class="display h1 mt-2">Stand together in prayer.</h1>
+        <p class="text-slate-400 mt-2 max-w-2xl" style="font-size: 0.95rem; line-height: 1.6;">
+          Every name matters. Every request counts. This is the shared record used during gathered prayer — updated live across all screens.
+        </p>
+      </div>
+
+      <!-- STATS ROW -->
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card" data-tone="total">
+          <span class="stat-label">Total Active</span>
+          <span class="stat-value" id="statTotal">—</span>
+          <div class="stat-accent"></div>
+        </div>
+        <div class="stat-card" data-tone="prayer">
+          <span class="stat-label">In Prayer</span>
+          <span class="stat-value" id="statPrayer">—</span>
+          <div class="stat-accent"></div>
+        </div>
+        <div class="stat-card" data-tone="cont">
+          <span class="stat-label">Continuing</span>
+          <span class="stat-value" id="statCont">—</span>
+          <div class="stat-accent"></div>
+        </div>
+        <div class="stat-card" data-tone="follow">
+          <span class="stat-label">Follow-up</span>
+          <span class="stat-value" id="statFollow">—</span>
+          <div class="stat-accent"></div>
+        </div>
+        <div class="stat-card" data-tone="answered">
+          <span class="stat-label">Answered</span>
+          <span class="stat-value" id="statAns">—</span>
+          <div class="stat-accent"></div>
+        </div>
+      </div>
+
+      <!-- SECTION 1: Active Prayer Records -->
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">Section 01</span>
+          <h2 class="display h2 mt-1">Active Requests</h2>
+          <p>Individual prayer entries. Live-synced across every device signed in.</p>
+        </div>
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <div class="search-box">
+            <input id="searchInput" type="search" placeholder="Search by name…" autocomplete="off" />
+          </div>
+          <select id="filterSel" class="!w-auto !py-2 !text-sm" style="min-width: 140px;">
+            <option value="all">All statuses</option>
+            <option value="In Prayer">In Prayer</option>
+            <option value="Continuing">Continuing</option>
+            <option value="Follow-up Needed">Follow-up</option>
+            <option value="Answered / Testimony">Answered</option>
+          </select>
+          <button onclick="showEntryView(false)" class="btn-primary flex items-center gap-2">
+            <span style="font-size:1rem; line-height:0;">+</span> New Entry
+          </button>
+        </div>
+      </div>
+
+      <div class="glass-panel">
+        <div class="list-header">
+           <div></div>
+           <div>Name</div>
+           <div>Status</div>
+           <div>Endorsed By</div>
+           <div>Prayer Notes</div>
+           <div class="text-right">Actions</div>
+        </div>
+        <div id="recordsBody"></div>
+      </div>
+
+      <!-- SECTION 2: Prayer Context -->
+      <div class="section-heading" style="margin-top: 3.5rem;">
+        <div>
+          <span class="eyebrow">Section 02</span>
+          <h2 class="display h2 mt-1">Prayer Context</h2>
+          <p>Shared context — country, ministry, and the week's verse — shown to the audience at the top of the presentation.</p>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="text-[11px] text-slate-500" style="letter-spacing: 0.04em;">
+            Saved <span id="generalSavedStamp" class="text-slate-300">—</span>
+          </div>
+          <button class="btn-primary" id="saveGeneralBtn" type="button">Save Context</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="glass-panel p-6">
+          <div class="flex items-baseline justify-between mb-5">
+            <h3 class="display h3">General Prayers</h3>
+            <span class="eyebrow" style="font-size: 0.6rem;">Ticker — left</span>
+          </div>
+          <div class="space-y-2">
+            <div><label class="!mt-0">Country</label><textarea id="country" rows="2" class="text-sm"></textarea></div>
+            <div><label>Ministry</label><textarea id="ministry" rows="2" class="text-sm"></textarea></div>
+            <div><label>Church</label><textarea id="church" rows="2" class="text-sm"></textarea></div>
+            <div><label>Other</label><textarea id="other" rows="2" class="text-sm"></textarea></div>
+          </div>
+        </div>
+
+        <div class="glass-panel p-6">
+          <div class="flex items-baseline justify-between mb-5">
+            <h3 class="display h3">Verse of the Week</h3>
+            <span class="eyebrow" style="font-size: 0.6rem;">Ticker — right</span>
+          </div>
+          <div class="space-y-2">
+            <div><label class="!mt-0">Reference</label><input id="verseRef" class="text-sm" placeholder="e.g. Philippians 4:6–7" /></div>
+            <div><label>Text</label><textarea id="verseText" rows="6" class="text-sm" placeholder="Verse text…"></textarea></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ENTRY / EDIT VIEW -->
+    <div id="dashboardEntryView" class="hidden-view">
+      <div class="max-w-3xl mx-auto pt-8">
+        <div class="flex items-center gap-4 mb-7">
+          <button onclick="showDashboardView()" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/5 text-slate-400 transition-colors" aria-label="Back" style="border: 1px solid var(--panel-border);">
+            ←
+          </button>
+          <div>
+            <span class="eyebrow" style="font-size: 0.65rem;" id="entryEyebrow">New Prayer Request</span>
+            <h2 class="display h2 mt-0.5" id="entryTitle">A name to lift up</h2>
+          </div>
+        </div>
+
+        <div class="glass-panel p-7 md:p-9">
+          <div id="editBanner" class="hidden mb-6" style="padding: 0.75rem 1rem; border-radius: 0.5rem; background: var(--gold-soft); border: 1px solid var(--gold-dim);">
+            <span class="eyebrow" style="color: var(--gold);">Editing</span>
+            <span id="editIdPill" class="text-xs text-amber-200 ml-2 font-mono opacity-70"></span>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">Identity</div>
+            <div>
+              <label class="!mt-0">Name</label>
+              <input id="pName" placeholder="Full name of the person being prayed for…" />
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <label class="!mt-0">Endorsed By</label>
+                <input id="pEndorsed" placeholder="Optional" />
+              </div>
+              <div>
+                <label class="!mt-0">Status</label>
+                <div class="chip-group" id="pStatusChips" role="radiogroup" aria-label="Prayer status">
+                  <button type="button" class="chip active" data-val="In Prayer">In Prayer</button>
+                  <button type="button" class="chip" data-val="Continuing">Continuing</button>
+                  <button type="button" class="chip" data-val="Follow-up Needed">Follow-up</button>
+                  <button type="button" class="chip" data-val="Answered / Testimony">Answered</button>
+                </div>
+                <select id="pStatus" aria-hidden="true" tabindex="-1">
+                  <option value="In Prayer">In Prayer</option>
+                  <option value="Continuing">Continuing</option>
+                  <option value="Follow-up Needed">Follow-up Needed</option>
+                  <option value="Answered / Testimony">Answered / Testimony</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">The Request</div>
+            <div>
+              <label class="!mt-0">Prayer Notes</label>
+              <textarea id="pNotes" rows="7" placeholder="What are we praying for? Include any relevant context the prayer team should carry with them…"></textarea>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 mt-7 pt-6" style="border-top: 1px solid var(--divider);">
+             <button class="btn-secondary" id="clearPersonBtn" type="button">Cancel</button>
+             <button class="btn-primary px-8" id="savePersonBtn" type="button">Save Entry</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+<div id="fabGear" class="fab-gear" onclick="toggleGearMenu()" style="display:none;">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0 .73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+</div>
+
+<div id="gearMenu" class="gear-menu">
+  <div class="flex justify-between items-center mb-4">
+    <h4 class="font-bold text-white text-sm">Remote Controls</h4>
+    <button onclick="toggleGearMenu()" class="text-xs text-slate-400">Close</button>
+  </div>
+  <div class="space-y-4">
+    <div>
+      <label class="!mt-0">Audience Screen</label>
+      <div class="flex gap-2">
+        <button class="btn-secondary flex-1 text-xs py-2 bg-green-600/20 text-green-400 border-green-600/50 hover:bg-green-600/30" id="presentBtn">🚀 Launch Audience</button>
+        <button class="btn-secondary flex-1 text-xs py-2" id="rpFullscreen">Fullscreen</button>
+      </div>
+    </div>
+    <div>
+      <label>Auto Scroll</label>
+      <div class="flex gap-2 mb-2">
+        <button class="btn-secondary flex-1 text-xs py-2" id="rpScrollToggle">Toggle</button>
+      </div>
+      <select id="rpScrollSpeed" class="text-xs py-2">
+        <option value="slow">Slow</option>
+        <option value="medium" selected>Medium</option>
+        <option value="fast">Fast</option>
+      </select>
+    </div>
+    <div>
+      <label>Text Size</label>
+      <div class="grid grid-cols-2 gap-2">
+        <button class="btn-secondary text-xs py-1" id="rpListMinus">List -</button>
+        <button class="btn-secondary text-xs py-1" id="rpListPlus">List +</button>
+        <button class="btn-secondary text-xs py-1" id="rpGenMinus">Gen -</button>
+        <button class="btn-secondary text-xs py-1" id="rpGenPlus">Gen +</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+// 1. FIREBASE IMPORTS (Updated to 10.7.1 for consistency)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, onSnapshot, addDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getDatabase, ref as dbRef, set as dbSet } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCWAxUm_Z_i-EP_xqayhQrwsL4Qkmh5fMA",
+  authDomain: "slidesync-37cd4.firebaseapp.com",
+  databaseURL: "https://slidesync-37cd4-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "slidesync-37cd4",
+  storageBucket: "slidesync-37cd4.firebasestorage.app",
+  messagingSenderId: "996754972458",
+  appId: "1:996754972458:web:7f8be6880c3463ac6a4853",
+  measurementId: "G-GCBS3X7STT"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const firestore = getFirestore(app);
+const rtdb = getDatabase(app);
+
+// ── REMOTE CONTROL BRIDGE (Firebase Realtime DB) ──────────────
+// Exposed to the classic non-module script below so it can push
+// commands to any presenter listening on this path, across devices.
+const remoteControlRef = dbRef(rtdb, 'prayer_manager/remote_control');
+window.sendRemoteToFirebase = (payload) => {
+    return dbSet(remoteControlRef, payload).catch(err => {
+        console.warn("[Remote] Firebase send failed:", err);
+    });
+};
+
+// ── FIRESTORE DATA LAYER ─────────────────────────────────────
+// Schema:
+//   prayer_entries/{auto-id} → { name, status, endorsedBy, notes, archived, createdAt, updatedAt }
+//   prayer_general/current   → { country, ministry, church, other, verseRef, verseText, updatedAt }
+const entriesCol  = collection(firestore, 'prayer_entries');
+const generalRef  = doc(firestore, 'prayer_general', 'current');
+
+let _entriesUnsub = null;   // active onSnapshot() for entries list
+
+window.firestoreAPI = {
+    entries: {
+        // Subscribe to live updates. Returns unsubscribe fn. Re-calling swaps
+        // the previous listener so we never stack duplicates on re-auth.
+        listen(onData, onError) {
+            if (_entriesUnsub) { _entriesUnsub(); _entriesUnsub = null; }
+            const q = query(
+                entriesCol,
+                where('archived', '==', false),
+                orderBy('createdAt', 'desc')
+            );
+            _entriesUnsub = onSnapshot(q, (snap) => {
+                const rows = [];
+                snap.forEach(d => rows.push({ entryId: d.id, ...d.data() }));
+                onData(rows);
+            }, onError || console.error);
+            return _entriesUnsub;
+        },
+        add(data) {
+            return addDoc(entriesCol, {
+                name:       data.name       || '',
+                status:     data.status     || 'In Prayer',
+                endorsedBy: data.endorsedBy || '',
+                notes:      data.notes      || '',
+                archived:   false,
+                createdAt:  serverTimestamp(),
+                updatedAt:  serverTimestamp()
+            });
+        },
+        update(id, data) {
+            return updateDoc(doc(entriesCol, id), {
+                name:       data.name       ?? '',
+                status:     data.status     ?? 'In Prayer',
+                endorsedBy: data.endorsedBy ?? '',
+                notes:      data.notes      ?? '',
+                updatedAt:  serverTimestamp()
+            });
+        },
+        archive(id) {
+            return updateDoc(doc(entriesCol, id), {
+                archived:   true,
+                archivedAt: serverTimestamp(),
+                updatedAt:  serverTimestamp()
+            });
+        }
+    },
+    general: {
+        // One-shot read (admin form fills from this). We don't use a listener
+        // here because a live update would clobber the admin's in-progress edits.
+        async get() {
+            const snap = await getDoc(generalRef);
+            return snap.exists() ? snap.data() : null;
+        },
+        save(data) {
+            return setDoc(generalRef, {
+                country:   data.country   || '',
+                ministry:  data.ministry  || '',
+                church:    data.church    || '',
+                other:     data.other     || '',
+                verseRef:  data.verseRef  || '',
+                verseText: data.verseText || '',
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+        }
+    },
+    cleanup() {
+        if (_entriesUnsub) { _entriesUnsub(); _entriesUnsub = null; }
+    }
+};
+
+window.firebaseAuth = auth;
+
+// 1. LOGIN HANDLER
+document.getElementById('lgBtn').addEventListener('click', () => {
+    const email = document.getElementById('lgEmail').value;
+    const pass = document.getElementById('lgPass').value;
+    const stat = document.getElementById('lgStatusTxt');
+    
+    if(!email || !pass) { stat.textContent = "Enter email & password"; return; }
+    
+    stat.textContent = "Verifying...";
+    document.getElementById('lgDot').className = "w-2 h-2 rounded-full bg-yellow-500 animate-pulse";
+    
+    signInWithEmailAndPassword(auth, email, pass).catch(e => {
+        stat.textContent = "Error: " + e.message;
+        document.getElementById('lgDot').className = "w-2 h-2 rounded-full bg-red-500";
+    });
+});
+
+// 2. AUTH STATE LISTENER (The Gatekeeper)
+onAuthStateChanged(auth, async (user) => {
+    const overlay = document.getElementById('loginOverlay');
+    const mainApp = document.getElementById('app');
+    const fab = document.getElementById('fabGear');
+    
+    if(user) {
+        try {
+            const userRef = doc(firestore, "users", user.uid);
+            const snap = await getDoc(userRef);
+            
+            if(snap.exists()) {
+                const data = snap.data();
+                if(data.accountStatus === 'disabled') throw new Error("Account Disabled");
+                
+                // MULTI-ROLE CHECK
+                let roles = [];
+                if(data.role) roles.push(String(data.role).toLowerCase());
+                if(data.roles && Array.isArray(data.roles)) roles = [...roles, ...data.roles.map(r=>String(r).toLowerCase())];
+                
+                const ALLOWED = ['admin', 'prayer1', 'prayer2', 'prayer3'];
+                const hasAccess = roles.some(r => ALLOWED.includes(r));
+                
+                if(hasAccess) {
+                    overlay.style.display = 'none';
+                    mainApp.style.display = 'block';
+                    fab.style.display = 'flex';
+                    if(window.initDashboard) window.initDashboard();
+                } else {
+                    throw new Error("Access Denied");
+                }
+            } else { throw new Error("No Profile"); }
+        } catch(e) {
+            console.error(e);
+            document.getElementById('lgStatusTxt').textContent = e.message;
+            signOut(auth);
+        }
+    } else {
+        if (window.firestoreAPI?.cleanup) window.firestoreAPI.cleanup();
+        overlay.style.display = 'flex';
+        mainApp.style.display = 'none';
+        fab.style.display = 'none';
+    }
+});
+
+// 3. LOGOUT HANDLER
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    if(confirm("Are you sure you want to log out?")) {
+        signOut(auth);
+    }
+});
+
+// ==========================================
+// 4. RESET PASSWORD LOGIC (Added Feature)
+// ==========================================
+window.resetUserPassword = async () => {
+    const email = prompt("Enter your email address to reset password:");
+    if (!email) return;
+
+    try {
+        await sendPasswordResetEmail(auth, email);
+        alert(`✅ Password reset email sent to: ${email}\n\n⚠️ IMPORTANT: Please check your SPAM/JUNK folder if you do not see it in your inbox.`);
+    } catch (error) {
+        alert("Error: " + error.message);
+    }
+};
+
+// ==========================================
+// 5. LOGIN TRACKER (Auto-Update Last Seen)
+// ==========================================
+// --- TRACKER FIX APPLIED ---
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        updateDoc(doc(firestore, "users", user.uid), {
+            lastLogin: serverTimestamp()
+        }).then(() => {
+            console.log("Login timestamp updated successfully.");
+        }).catch((error) => {
+            console.error("Failed to update timestamp:", error);
+        });
+    }
+});
+</script>
+
+<script>
+// === MAIN ADMIN LOGIC (Firestore-backed) ===
+let allRecords = [];
+let editingId = null;
+const bc = new BroadcastChannel("kor_prayer_present");
+
+// Init — attaches a live Firestore listener. All future UI updates are
+// reactive: a write triggers onSnapshot, which re-renders the list.
+window.initDashboard = () => {
+    loadRecords();
+    loadGeneralData();
+};
+
+// --- RECORDS (live subscription) ---
+function loadRecords() {
+    const list = document.getElementById('recordsBody');
+    renderSkeleton();
+
+    if (!window.firestoreAPI) {
+        list.innerHTML = '<div class="empty-state"><div class="display h3" style="color: #d48a8a;">Data layer not ready</div><p>Reload the page to reconnect.</p></div>';
+        return;
+    }
+
+    window.firestoreAPI.entries.listen(
+        (rows) => {
+            allRecords = rows;
+            renderRecords();
+        },
+        (err) => {
+            console.error('[Firestore] entries listen error:', err);
+            list.innerHTML = `<div class="empty-state"><div class="display h3" style="color: #d48a8a;">Sync error</div><p>${err.message}</p></div>`;
+        }
+    );
+}
+
+// --- FIXED GRID RENDERER ---
+// Remember which rows the user has expanded so live Firestore snapshot
+// re-renders don't collapse them out from under the user.
+const expandedNotes = new Set();
+
+// ─── Toast notifications ─────────────────────────────────────
+window.showToast = (message, kind = 'info', duration = 3000) => {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.setAttribute('data-kind', kind);
+    el.textContent = message;
+    container.appendChild(el);
+    setTimeout(() => {
+        el.classList.add('leaving');
+        el.addEventListener('animationend', () => el.remove(), { once: true });
+    }, duration);
+};
+
+// ─── Chip selector sync (pStatus hidden select) ──────────────
+function syncStatusChips(value) {
+    const chips = document.querySelectorAll('#pStatusChips .chip');
+    chips.forEach(c => c.classList.toggle('active', c.dataset.val === value));
+    const sel = document.getElementById('pStatus');
+    if (sel) sel.value = value;
+}
+document.querySelectorAll('#pStatusChips .chip').forEach(chip => {
+    chip.addEventListener('click', () => syncStatusChips(chip.dataset.val));
+});
+
+// ─── Avatar initials ─────────────────────────────────────────
+function initialsOf(name) {
+    if (!name) return '·';
+    const parts = String(name).trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// ─── Skeleton loader for records ─────────────────────────────
+function renderSkeleton() {
+    const list = document.getElementById('recordsBody');
+    const rows = Array.from({ length: 4 }).map(() => `
+        <div class="skeleton-row">
+          <div class="skeleton circle"></div>
+          <div class="skeleton tall" style="width: 65%;"></div>
+          <div class="skeleton" style="width: 70%;"></div>
+          <div class="skeleton" style="width: 55%;"></div>
+          <div>
+            <div class="skeleton" style="width: 85%;"></div>
+            <div class="skeleton mt-2" style="width: 60%;"></div>
+          </div>
+          <div class="skeleton" style="width: 60%; margin-left: auto;"></div>
+        </div>
+    `).join('');
+    list.innerHTML = rows;
+}
+
+// ─── Stats computation ───────────────────────────────────────
+function renderStats() {
+    const counts = { total: 0, prayer: 0, cont: 0, follow: 0, ans: 0 };
+    allRecords.forEach(r => {
+        counts.total++;
+        if (r.status === 'Continuing') counts.cont++;
+        else if (r.status === 'Follow-up Needed') counts.follow++;
+        else if (r.status && r.status.startsWith('Answered')) counts.ans++;
+        else counts.prayer++;
+    });
+    const setV = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setV('statTotal',  counts.total);
+    setV('statPrayer', counts.prayer);
+    setV('statCont',   counts.cont);
+    setV('statFollow', counts.follow);
+    setV('statAns',    counts.ans);
+}
+
+// ─── Notes toggle (expand/collapse) ──────────────────────────
+window.toggleNotes = (id, btn) => {
+    const cell = document.querySelector(`.notes-cell[data-entry-id="${id}"]`);
+    if (!cell) return;
+    const wasExpanded = cell.getAttribute('data-expanded') === 'true';
+    const nowExpanded = !wasExpanded;
+    cell.setAttribute('data-expanded', String(nowExpanded));
+    btn.textContent = nowExpanded ? 'Show less' : 'Read more';
+    if (nowExpanded) expandedNotes.add(id); else expandedNotes.delete(id);
+};
+
+// ─── Map status → data-attribute value for styling ───────────
+function statusTone(st) {
+    if (st === 'Continuing') return 'cont';
+    if (st === 'Follow-up Needed') return 'follow';
+    if (st && st.startsWith('Answered')) return 'answered';
+    return 'prayer';
+}
+
+// ─── Main records render ─────────────────────────────────────
+function renderRecords() {
+    renderStats();
+    const filter = document.getElementById('filterSel').value;
+    const searchQ = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+    const list = document.getElementById('recordsBody');
+    list.innerHTML = '';
+
+    let filtered = allRecords.filter(r => filter === 'all' || r.status === filter);
+    if (searchQ) {
+        filtered = filtered.filter(r => String(r.name || '').toLowerCase().includes(searchQ));
+    }
+
+    if (filtered.length === 0) {
+        const msg = searchQ
+            ? `No records match "<em>${searchQ.replace(/</g,'&lt;')}</em>".`
+            : 'No prayer requests yet. Add one to begin.';
+        list.innerHTML = `<div class="empty-state"><div class="display h3">Nothing here yet</div><p>${msg}</p></div>`;
+        return;
+    }
+
+    const esc = (s) => String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+    filtered.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'list-row';
+        row.setAttribute('data-status', statusTone(r.status));
+
+        let pillClass = "pill-prayer";
+        if (r.status === "Continuing") pillClass = "pill-cont";
+        if (r.status === "Follow-up Needed") pillClass = "pill-follow";
+        if (r.status && r.status.startsWith("Answered")) pillClass = "pill-ans";
+
+        const notesRaw = r.notes || '';
+        const lineBreaks = (notesRaw.match(/\n/g) || []).length;
+        const mayTruncate = notesRaw.length > 180 || lineBreaks >= 2;
+        const isExpanded = expandedNotes.has(r.entryId);
+
+        const notesHtml = !notesRaw
+          ? `<div class="notes-empty">No notes yet</div>`
+          : `<div class="notes-text">${esc(notesRaw)}</div>` +
+            (mayTruncate
+              ? `<button type="button" class="notes-toggle" onclick="toggleNotes('${r.entryId}', this)">${isExpanded ? 'Show less' : 'Read more'}</button>`
+              : '');
+
+        row.innerHTML = `
+            <div class="flex items-start" style="padding-top: 2px;">
+              <div class="avatar" aria-hidden="true">${esc(initialsOf(r.name))}</div>
+            </div>
+
+            <div>
+              <div class="record-name">${esc(r.name || 'Unnamed')}</div>
+              <div class="record-meta lg:hidden">
+                <span class="pill ${pillClass}">${esc(r.status || 'In Prayer')}</span>
+              </div>
+            </div>
+
+            <div class="col-status-desktop hidden lg:block">
+               <span class="pill ${pillClass}">${esc(r.status || 'In Prayer')}</span>
+            </div>
+
+            <div class="text-sm" style="color: var(--text-secondary);">
+               ${r.endorsedBy ? esc(r.endorsedBy) : '<span style="color: var(--text-faint);">—</span>'}
+            </div>
+
+            <div class="notes-cell"
+                 data-entry-id="${r.entryId}"
+                 data-truncated="${mayTruncate ? 'true' : 'false'}"
+                 data-expanded="${isExpanded ? 'true' : 'false'}">
+              ${notesHtml}
+            </div>
+
+            <div class="flex gap-1.5 justify-end">
+               <button onclick="editEntry('${r.entryId}')" class="row-action">Edit</button>
+               <button onclick="archiveEntry('${r.entryId}')" class="row-action danger">Archive</button>
+            </div>
+        `;
+        list.appendChild(row);
+    });
+}
+
+// --- EDITING ---
+window.editEntry = (id) => {
+    const rec = allRecords.find(r => r.entryId === id);
+    if(!rec) return;
+
+    editingId = id;
+    document.getElementById('pName').value = rec.name || '';
+    document.getElementById('pStatus').value = rec.status || 'In Prayer';
+    document.getElementById('pEndorsed').value = rec.endorsedBy || '';
+    document.getElementById('pNotes').value = rec.notes || '';
+    document.getElementById('editIdPill').textContent = "#" + id.substring(0,6);
+    syncStatusChips(rec.status || 'In Prayer');
+    showEntryView(true);
+};
+
+// --- UPDATED SAVE ENTRY (Firestore) ---
+// No manual reload needed — the live listener re-renders automatically when
+// Firestore commits the write.
+window.saveEntry = async () => {
+    const name = document.getElementById('pName').value.trim();
+    if (!name) {
+        showToast("Please enter a name first.", 'error');
+        document.getElementById('pName').focus();
+        return;
+    }
+    const payload = {
+        name,
+        status:     document.getElementById('pStatus').value,
+        endorsedBy: document.getElementById('pEndorsed').value,
+        notes:      document.getElementById('pNotes').value
+    };
+    const btn = document.getElementById('savePersonBtn');
+    const wasEditing = !!editingId;
+    btn.textContent = "Saving…";
+    btn.disabled = true;
+
+    try {
+        if (wasEditing) {
+            await window.firestoreAPI.entries.update(editingId, payload);
+            showToast(`Updated ${name}.`, 'success');
+        } else {
+            await window.firestoreAPI.entries.add(payload);
+            showToast(`Added ${name} to the prayer list.`, 'success');
+        }
+        btn.disabled = false;
+        btn.textContent = "Save Entry";
+        showDashboardView();
+    } catch (err) {
+        console.error('[Firestore] save entry failed:', err);
+        showToast("Save failed: " + err.message, 'error', 5000);
+        btn.disabled = false;
+        btn.textContent = "Save Entry";
+    }
+};
+
+window.archiveEntry = async (id) => {
+    const rec = allRecords.find(r => r.entryId === id);
+    const name = rec?.name || 'this request';
+    if (!confirm(`Archive ${name}? This removes it from the active list.`)) return;
+    try {
+        await window.firestoreAPI.entries.archive(id);
+        showToast(`Archived ${name}.`, 'info');
+    } catch (err) {
+        console.error('[Firestore] archive failed:', err);
+        showToast("Archive failed: " + err.message, 'error', 5000);
+    }
+};
+
+// --- GENERAL (one-shot read; a live listener would clobber in-progress edits) ---
+async function loadGeneralData() {
+    try {
+        const g = await window.firestoreAPI.general.get();
+        if (!g) return;
+        document.getElementById('country').value    = g.country   || '';
+        document.getElementById('ministry').value   = g.ministry  || '';
+        document.getElementById('church').value     = g.church    || '';
+        document.getElementById('other').value      = g.other     || '';
+        document.getElementById('verseRef').value   = g.verseRef  || '';
+        document.getElementById('verseText').value  = g.verseText || '';
+        const stamp = g.updatedAt?.toDate ? g.updatedAt.toDate().toLocaleString() : '—';
+        document.getElementById('generalSavedStamp').textContent = stamp;
+    } catch (err) {
+        console.error('[Firestore] load general failed:', err);
+    }
+}
+
+// --- SAVE GENERAL (Firestore) ---
+window.saveGeneral = async () => {
+    const payload = {
+        country:   document.getElementById('country').value,
+        ministry:  document.getElementById('ministry').value,
+        church:    document.getElementById('church').value,
+        other:     document.getElementById('other').value,
+        verseRef:  document.getElementById('verseRef').value,
+        verseText: document.getElementById('verseText').value
+    };
+    const btn = document.getElementById('saveGeneralBtn');
+    btn.textContent = "Saving…";
+    btn.disabled = true;
+    try {
+        await window.firestoreAPI.general.save(payload);
+        document.getElementById('generalSavedStamp').textContent = "Just now";
+        showToast("Prayer context updated.", 'success');
+    } catch (err) {
+        console.error('[Firestore] save general failed:', err);
+        showToast("Save failed: " + err.message, 'error', 5000);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Save Context";
+    }
+};
+
+// --- BINDINGS ---
+document.getElementById('savePersonBtn').onclick = window.saveEntry;
+document.getElementById('saveGeneralBtn').onclick = window.saveGeneral;
+document.getElementById('clearPersonBtn').onclick = () => { editingId = null; showDashboardView(); };
+document.getElementById('filterSel').onchange = renderRecords;
+document.getElementById('searchInput').addEventListener('input', renderRecords);
+
+// View Switching
+window.showDashboardView = () => {
+    document.getElementById('dashboardView').classList.remove('hidden-view');
+    document.getElementById('dashboardEntryView').classList.add('hidden-view');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+window.showEntryView = (isEdit) => {
+    document.getElementById('dashboardView').classList.add('hidden-view');
+    document.getElementById('dashboardEntryView').classList.remove('hidden-view');
+    document.getElementById('entryEyebrow').textContent = isEdit ? 'Editing Prayer Request' : 'New Prayer Request';
+    document.getElementById('entryTitle').textContent   = isEdit ? 'Refine the request' : 'A name to lift up';
+    document.getElementById('editBanner').style.display = isEdit ? 'block' : 'none';
+    if(!isEdit) {
+        document.getElementById('pName').value = "";
+        document.getElementById('pNotes').value = "";
+        document.getElementById('pEndorsed').value = "";
+        syncStatusChips('In Prayer');
+        editingId = null;
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => document.getElementById('pName').focus(), 300);
+};
+// Gear Menu Logic
+window.toggleGearMenu = () => {
+    document.getElementById('gearMenu').classList.toggle('active');
+};
+// Presentation Launch — Opens the hosted external URL
+document.getElementById('presentBtn').onclick = () => {
+    window.open('https://king-righteousness.w3spaces.com/Prayers/prayer-presentation.html', '_blank');
+};
+// Remote Controls — dual send:
+//   • BroadcastChannel → reaches the local blob-URL popup (same origin, offline-friendly)
+//   • Firebase RTDB    → reaches prayer-present.html on any device, any network
+const sendRemote = (payload) => {
+    const msg = { ...payload, timestamp: Date.now() };
+    // 1. Local popup (same-origin BroadcastChannel)
+    try { bc.postMessage(msg); } catch (e) { /* ignore */ }
+    // 2. Remote presenters (Firebase). The module script above sets this up.
+    //    If the module hasn't finished loading yet (extremely unlikely since
+    //    the user is already logged in), we silently skip the Firebase hop.
+    if (typeof window.sendRemoteToFirebase === 'function') {
+        window.sendRemoteToFirebase(msg);
+    }
+};
+
+// Legacy-compatible wrapper kept for the existing call sites
+const send = (type, op, value) => sendRemote({
+    type,
+    op: op || null,
+    value: (value === undefined ? null : value),
+    target: op === "scale" ? type : null
+});
+
+document.getElementById('rpFullscreen').onclick    = () => send('fullscreen');
+document.getElementById('rpScrollToggle').onclick  = () => send('autoscroll', 'toggle');
+document.getElementById('rpScrollSpeed').onchange  = (e) => send('autoscroll', 'speed', e.target.value);
+document.getElementById('rpListMinus').onclick     = () => sendRemote({ type:'scale', target:'list', value: -0.1 });
+document.getElementById('rpListPlus').onclick      = () => sendRemote({ type:'scale', target:'list', value: +0.1 });
+document.getElementById('rpGenMinus').onclick      = () => sendRemote({ type:'scale', target:'gen',  value: -0.1 });
+document.getElementById('rpGenPlus').onclick       = () => sendRemote({ type:'scale', target:'gen',  value: +0.1 });
+
+</script>
+</body>
+</html>
