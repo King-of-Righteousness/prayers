@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KOR Prayer Items – Presentation View</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  /* =========================================
+     SMART ZOOM SCALING (DESKTOP VS MOBILE)
+  ========================================= */
+  @media (min-width: 1024px) {
+    body {
+      zoom: 75%;
+      width: 133.33vw !important;
+      height: 133.33vh !important;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+  }
+  @media (max-width: 1023px) {
+    body {
+      zoom: 100%;
+      width: 100vw !important;
+      height: 100vh !important;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+  }
+
+  /* ── Design Tokens ──────────────────────────────────────── */
+  :root {
+    --bg:          #06080f;
+    --bg2:         #0a0e1a;
+    --text:        #e8e4dc;
+    --text-muted:  #8a8070;
+    --gold:        #c9a84c;
+    --gold-dim:    #7a5e28;
+    --gold-glow:   rgba(201,168,76,0.15);
+    --gold-border: rgba(201,168,76,0.3);
+    --sapphire:    #1a2744;
+    --sapphire2:   #121d36;
+
+    --topbarBg:    rgba(8,11,22,0.98);
+    --panelBg:     #090d1a;
+    --panelBorder: rgba(201,168,76,0.18);
+    --hdrBg:       #0d1222;
+    --rowBorder:   rgba(255,255,255,0.05);
+    --pillBg:      rgba(201,168,76,0.1);
+
+    --status-prayer:   #1e3a8a;
+    --status-follow:   #7c2d12;
+    --status-cont:     #065f46;
+    --status-answered: #14532d;
+
+    --ticker-bg:    #0c1428;
+    --ticker-text:  #e8e4dc;
+    --ticker-label: #c9a84c;
+  }
+
+  /* ── Reset & Base ───────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  /* ── Ambient background ─────────────────────────────────── */
+  html::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 70% 50% at 15% 20%, rgba(201,168,76,0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 85% 80%, rgba(26,39,68,0.8) 0%, transparent 60%),
+      radial-gradient(ellipse 100% 80% at 50% 0%, rgba(10,14,26,0.6) 0%, transparent 70%);
+  }
+
+  /* ── Screen wrapper ─────────────────────────────────────── */
+  .screen {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    position: relative; z-index: 1;
+  }
+
+  /* ── Top Bar ────────────────────────────────────────────── */
+  .topbar {
+    flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    padding: 12px 28px;
+    background: var(--topbarBg);
+    border-bottom: 1px solid var(--gold-border);
+    position: relative; z-index: 100;
+  }
+
+  .topbar::before {
+    content: '✦';
+    position: absolute; left: 28px;
+    color: var(--gold-dim); font-size: 14px; opacity: 0.7;
+    animation: pulse-cross 3s ease-in-out infinite;
+  }
+  .topbar::after {
+    content: '✦';
+    position: absolute; right: 28px;
+    color: var(--gold-dim); font-size: 14px; opacity: 0.7;
+    animation: pulse-cross 3s ease-in-out infinite 1.5s;
+  }
+  @keyframes pulse-cross {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 0.9; transform: scale(1.2); }
+  }
+
+  .title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(201,168,76,0.4);
+  }
+
+  /* ── Ticker / Billboard ─────────────────────────────────── */
+  .billboard-section {
+    flex: 0 0 auto;
+    background: var(--ticker-bg);
+    border-bottom: 2px solid var(--gold-border);
+    border-top: 12px solid var(--bg);
+    height: 96px;
+    box-sizing: border-box;
+    display: flex; align-items: center;
+    overflow: hidden; position: relative;
+    z-index: 10;
+  }
+
+  .billboard-section::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0.5;
+  }
+
+  .billboard-label {
+    flex: 0 0 auto; height: 100%;
+    background: linear-gradient(135deg, #b8922a 0%, var(--gold) 50%, #b8922a 100%);
+    color: #06080f;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700; font-size: 20px;
+    padding: 0 28px;
+    display: flex; align-items: center;
+    text-transform: uppercase; letter-spacing: 2px;
+    box-shadow: 6px 0 20px rgba(0,0,0,0.5);
+    z-index: 15;
+    white-space: nowrap;
+  }
+
+  .ticker-wrapper {
+    flex: 1; overflow: hidden; white-space: nowrap;
+    position: relative; height: 100%;
+    display: flex; align-items: center;
+  }
+
+  .ticker-wrapper::before, .ticker-wrapper::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 60px; z-index: 5; pointer-events: none;
+  }
+  .ticker-wrapper::before { left: 0; background: linear-gradient(90deg, var(--ticker-bg), transparent); }
+  .ticker-wrapper::after  { right: 0; background: linear-gradient(-90deg, var(--ticker-bg), transparent); }
+
+  .ticker-content {
+    display: inline-block; white-space: nowrap;
+    padding-left: 100%;
+    animation: ticker-move 90s linear infinite;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--ticker-size, 32px);
+    font-weight: 400;
+    color: var(--ticker-text);
+    will-change: transform; line-height: 1;
+    letter-spacing: 0.02em;
+  }
+  @keyframes ticker-move {
+    0%   { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-100%, 0, 0); }
+  }
+
+  /* ── Main Content ───────────────────────────────────────── */
+  .content {
+    flex: 1 1 auto;
+    padding: 14px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+
+  .panel {
+    flex: 1;
+    border: 1px solid var(--panelBorder);
+    background: var(--panelBg);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.03),
+      0 4px 32px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(201,168,76,0.08);
+    position: relative;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent 5%, var(--gold-border) 30%, var(--gold-border) 70%, transparent 95%);
+    pointer-events: none; z-index: 2;
+  }
+
+  /* ── Panel Header ───────────────────────────────────────── */
+  .panelHeader {
+    background: var(--hdrBg);
+    border-bottom: 1px solid rgba(201,168,76,0.12);
+    padding: 12px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+    position: relative;
+  }
+
+  .hdrLeft {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--gold);
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border: 1px solid var(--gold-border);
+    border-radius: 999px;
+    background: var(--pillBg);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px; font-weight: 500;
+    color: var(--gold); letter-spacing: 0.05em;
+  }
+
+  /* ── List ───────────────────────────────────────────────── */
+  .list {
+    flex: 1; overflow-y: auto;
+    scroll-behavior: auto;
+    --scroll-spacer-height: 0px;
+    will-change: transform, scroll-position;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gold-dim) transparent;
+  }
+  .list::-webkit-scrollbar { width: 4px; }
+  .list::-webkit-scrollbar-track { background: transparent; }
+  .list::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+
+  .list.scrolling-active::before,
+  .list.scrolling-active::after {
+    content: ''; display: block; width: 100%;
+    height: var(--scroll-spacer-height); pointer-events: none;
+  }
+
+  /* ── Row ────────────────────────────────────────────────── */
+  .row {
+    display: grid;
+    grid-template-columns: minmax(0, 35em) minmax(0, 1fr);
+    grid-template-rows: auto;
+    gap: 0;
+    border-bottom: 1px solid var(--rowBorder);
+    align-items: stretch;
+    transition: background 0.2s;
+  }
+
+  .row:hover { background: rgba(201,168,76,0.03); }
+
+  .name-col {
+    display: flex; flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    padding: 18px 20px 18px 24px;
+    border-right: 1px solid var(--rowBorder);
+    background: rgba(255,255,255,0.01);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: var(--name-size, 26px);
+    font-weight: 600;
+    line-height: 1.1; color: #f0ece4;
+    letter-spacing: 0.02em;
+  }
+
+  .status {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.8px;
+    color: rgba(255,255,255,0.9);
+    align-self: flex-start;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .status.prayer  { background: rgba(30,58,138,0.7);  border-color: rgba(96,165,250,0.2); }
+  .status.follow  { background: rgba(124,45,18,0.7);  border-color: rgba(251,146,60,0.2); }
+  .status.cont    { background: rgba(6,95,70,0.7);    border-color: rgba(52,211,153,0.2); }
+  .status.answered{ background: rgba(20,83,45,0.7);   border-color: rgba(74,222,128,0.25); }
+
+  .notes {
+    padding: 18px 28px 18px 24px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--notes-size, 22px);
+    line-height: 1.55;
+    font-weight: 300; color: #d4cfc7;
+    display: flex; align-items: center;
+  }
+
+  .empty {
+    padding: 60px; text-align: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px; color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .row-divider {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 24px;
+    opacity: 0.35;
+  }
+  .row-divider::before, .row-divider::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold));
+  }
+  .row-divider::after { background: linear-gradient(-90deg, transparent, var(--gold)); }
+  .row-divider span { color: var(--gold); font-size: 10px; letter-spacing: 2px; white-space: nowrap; }
+
+  /* =========================================
+     FULLSCREEN MODAL OVERLAY
+  ========================================= */
+  #fs-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(4, 6, 14, 0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Animate in */
+    animation: fsOverlayIn 0.4s ease both;
+    /* Backdrop blur only supported in modern browsers */
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+
+  #fs-overlay.dismissing {
+    animation: fsOverlayOut 0.35s ease forwards;
+  }
+
+  @keyframes fsOverlayIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes fsOverlayOut {
+    from { opacity: 1; }
+    to   { opacity: 0; pointer-events: none; }
+  }
+
+  .fs-card {
+    background: #0b1022;
+    border: 1px solid var(--gold-border);
+    border-radius: 20px;
+    padding: 44px 48px 40px;
+    max-width: 460px;
+    width: calc(100% - 48px);
+    text-align: center;
+    position: relative;
+    box-shadow:
+      0 0 0 1px rgba(201,168,76,0.06),
+      0 8px 60px rgba(0,0,0,0.7),
+      inset 0 1px 0 rgba(201,168,76,0.12);
+    animation: fsCardIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes fsCardIn {
+    from { opacity: 0; transform: translateY(18px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Gold top-line ornament */
+  .fs-card::before {
+    content: '';
+    position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    border-radius: 999px;
+  }
+
+  .fs-icon {
+    width: 64px; height: 64px;
+    margin: 0 auto 24px;
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 16px;
+    background: rgba(201,168,76,0.07);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold);
+  }
+
+  .fs-icon svg {
+    width: 28px; height: 28px;
+    stroke: var(--gold);
+    fill: none;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .fs-heading {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--text);
+    margin-bottom: 12px;
+    line-height: 1.15;
+  }
+
+  .fs-sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 36px;
+  }
+
+  .fs-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .btn-fs-enter {
+    display: block; width: 100%;
+    padding: 14px 24px;
+    border-radius: 10px;
+    border: 1px solid rgba(201,168,76,0.5);
+    background: linear-gradient(135deg, rgba(201,168,76,0.18) 0%, rgba(201,168,76,0.08) 100%);
+    color: var(--gold);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 500;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.1s;
+  }
+  .btn-fs-enter:hover {
+    background: linear-gradient(135deg, rgba(201,168,76,0.28) 0%, rgba(201,168,76,0.14) 100%);
+    border-color: rgba(201,168,76,0.75);
+  }
+  .btn-fs-enter:active { transform: scale(0.98); }
+
+  .btn-fs-ignore {
+    display: block; width: 100%;
+    padding: 11px 24px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 300;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .btn-fs-ignore:hover {
+    color: var(--text);
+    border-color: rgba(255,255,255,0.15);
+  }
+
+  /* =========================================
+     MOBILE RESPONSIVE
+  ========================================= */
+  @media (max-width: 768px) {
+    .content { padding: 6px; }
+    .billboard-label { display: none; }
+    .billboard-section { height: 56px; border-top: 4px solid var(--bg); }
+    .ticker-content { font-size: 18px; }
+    .hdrLeft { font-size: 15px; }
+    .panelHeader { padding: 8px 14px; }
+
+    .row {
+      grid-template-columns: 1fr;
+      padding: 0;
+    }
+    .name-col {
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px 8px;
+      border-right: none;
+      border-bottom: 1px solid var(--rowBorder);
+    }
+    .name { font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; }
+    .status { font-size: 9px; padding: 2px 7px; }
+    .notes { font-size: 14px; line-height: 1.4; padding: 10px 14px 12px; }
+    .list { padding-bottom: 40px; }
+
+    .fs-card { padding: 36px 28px 32px; }
+    .fs-heading { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ══ Fullscreen Prompt Overlay ══════════════════════════ -->
+  <div id="fs-overlay" role="dialog" aria-modal="true" aria-labelledby="fs-heading">
+    <div class="fs-card">
+      <div class="fs-icon" aria-hidden="true">
+        <!-- Expand / fullscreen icon -->
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <polyline points="15 3 21 3 21 9"/>
+          <polyline points="9 21 3 21 3 15"/>
+          <line x1="21" y1="3" x2="14" y2="10"/>
+          <line x1="3" y1="21" x2="10" y2="14"/>
+        </svg>
+      </div>
+      <h2 class="fs-heading" id="fs-heading">Enter Fullscreen?</h2>
+      <p class="fs-sub">For the best presentation experience, this view is designed to be used in fullscreen mode.</p>
+      <div class="fs-actions">
+        <button class="btn-fs-enter" id="btn-enter-fs" autofocus>Enter Fullscreen</button>
+        <button class="btn-fs-ignore" id="btn-ignore-fs">Continue without fullscreen</button>
+      </div>
+    </div>
+  </div>
+
+<div class="screen">
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="title">Prayer Items</div>
+  </div>
+
+  <!-- Ticker / Billboard -->
+  <div class="billboard-section">
+    <div class="billboard-label">General Prayers</div>
+    <div class="ticker-wrapper">
+      <div class="ticker-content" id="tickerContent">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="content">
+    <div class="panel">
+      <div class="panelHeader">
+        <div class="hdrLeft">
+          <span>Prayer Items</span>
+          <span class="pill" id="countLabel">0</span>
+        </div>
+      </div>
+      <div class="list" id="list">
+        <div class="empty">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  /* ── Fullscreen Modal Logic ── */
+  (function() {
+    const overlay   = document.getElementById('fs-overlay');
+    const btnEnter  = document.getElementById('btn-enter-fs');
+    const btnIgnore = document.getElementById('btn-ignore-fs');
+
+    function dismissOverlay() {
+      overlay.classList.add('dismissing');
+      overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
+    }
+
+    btnEnter.addEventListener('click', function() {
+      const el = document.documentElement;
+      const req = el.requestFullscreen
+        || el.webkitRequestFullscreen
+        || el.mozRequestFullScreen
+        || el.msRequestFullscreen;
+      if (req) {
+        req.call(el).catch(() => {});
+      }
+      dismissOverlay();
+    });
+
+    btnIgnore.addEventListener('click', dismissOverlay);
+
+    /* Also dismiss on Escape key */
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && document.getElementById('fs-overlay')) {
+        dismissOverlay();
+      }
+    }, { once: true });
+  })();
+
+  /* ── All original logic preserved exactly ── */
+  const STATUS_EMOJI = { "In Prayer": "🙏", "Continuing": "🔁", "Follow-up Needed": "🔔", "Answered / Testimony": "🎉" };
+  let allEntries = []; let general = null;
+  const listEl = document.getElementById("list");
+  const countLabel = document.getElementById("countLabel");
+  const tickerContent = document.getElementById("tickerContent");
+  let scrollSpeedVal = "medium";
+
+  function escapeHtml(s){ return String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+  function pick(obj, keys){ for (const k of keys){ if (obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== "") return obj[k]; } return ""; }
+  function statusClass(st){ if (String(st).startsWith("Answered")) return "answered"; if (st === "Follow-up Needed") return "follow"; if (st === "Continuing") return "cont"; return "prayer"; }
+  function mapEntry(raw){ return { name: pick(raw, ["name","Name"]), status: pick(raw, ["status","Status"]) || "In Prayer", notes: pick(raw, ["notes","Notes"]) }; }
+
+  function renderPeople(){
+    listEl.innerHTML = '';
+    countLabel.textContent = allEntries.length;
+    if (!allEntries.length){ listEl.innerHTML += '<div class="empty">No entries found</div>'; applyScalesToDom(); return; }
+    allEntries.forEach(e => {
+      const st = e.status || "In Prayer";
+      const row = document.createElement("div"); row.className = "row";
+      row.innerHTML = `<div class="name-col"><div class="name">${escapeHtml(e.name)}</div><span class="status ${statusClass(st)}">${escapeHtml((STATUS_EMOJI[st]||"") + " " + st)}</span></div><div class="notes">${escapeHtml(e.notes || "")}</div>`;
+      listEl.appendChild(row);
+    });
+    applyScalesToDom();
+  }
+
+  function renderGeneral(){
+    if (!general){ tickerContent.textContent = ""; return; }
+    const parts = [];
+    if (pick(general, ["country"])) parts.push("🌍 Country: " + pick(general, ["country"]));
+    if (pick(general, ["ministry"])) parts.push("🤝 Ministry: " + pick(general, ["ministry"]));
+    if (pick(general, ["church"])) parts.push("⛪ Church: " + pick(general, ["church"]));
+    if (pick(general, ["other"])) parts.push("💡 " + pick(general, ["other"]));
+    const vRef = pick(general, ["VerseReference","verseRef"]); const vTxt = pick(general, ["VerseText","verseText"]);
+    if (vRef) parts.push(`📖 ${vRef}: "${vTxt}"`);
+    if (parts.length === 0) return;
+    const spacer = " \u00A0\u00A0 ••• \u00A0\u00A0 ";
+    const fullText = parts.join(spacer);
+    tickerContent.textContent = fullText + spacer + fullText + spacer + fullText;
+    updateTickerSpeed();
+  }
+
+  function updateTickerSpeed(){
+    let dur = "90s";
+    if (scrollSpeedVal === "fast") dur = "50s";
+    if (scrollSpeedVal === "slow") dur = "150s";
+    tickerContent.style.animationDuration = dur;
+  }
+
+  /* ── Firestore real-time data sync ── */
+  function initDataSync() {
+    if (!firestore) {
+      listEl.innerHTML = '<div class="empty">Data layer offline</div>';
+      return;
+    }
+
+    firestore.collection('prayer_entries')
+      .where('archived', '==', false)
+      .orderBy('createdAt', 'desc')
+      .onSnapshot((snap) => {
+        allEntries = [];
+        snap.forEach(d => allEntries.push(mapEntry(d.data())));
+        renderPeople();
+      }, (err) => {
+        console.error('[Data] entries listen error:', err);
+        listEl.innerHTML = `<div class="empty">Sync error: ${escapeHtml(err.message)}</div>`;
+      });
+
+    firestore.doc('prayer_general/current')
+      .onSnapshot((snap) => {
+        general = snap.exists ? snap.data() : null;
+        renderGeneral();
+      }, (err) => console.error('[Data] general listen error:', err));
+  }
+
+  let scrollEnabled = false; let scrollRaf = null;
+  let lastTs = null; let scrollCarry = 0;
+
+  function getScrollPxPerSecond(){
+    if (scrollSpeedVal === "slow") return 15;
+    if (scrollSpeedVal === "fast") return 55;
+    return 30;
+  }
+
+  function startAutoScroll(){
+    scrollEnabled = true;
+    if (listEl) { listEl.style.setProperty("--scroll-spacer-height", listEl.clientHeight + "px"); listEl.classList.add("scrolling-active"); listEl.scrollTop = 0; }
+    cancelAnimationFrame(scrollRaf); lastTs = null;
+    scrollCarry = 0;
+    const step = (ts) => {
+      if (!scrollEnabled) return;
+      if (!lastTs) lastTs = ts;
+      const dt = Math.max(0, (ts - lastTs) / 1000); lastTs = ts;
+      if (listEl && listEl.scrollHeight > listEl.clientHeight) {
+        scrollCarry += getScrollPxPerSecond() * dt;
+        const inc = Math.floor(scrollCarry);
+        if (inc > 0) { listEl.scrollTop += inc; scrollCarry -= inc; }
+        if (listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 2) { listEl.scrollTop = 0; scrollCarry = 0; }
+      }
+      scrollRaf = requestAnimationFrame(step);
+    };
+    scrollRaf = requestAnimationFrame(step);
+  }
+
+  function stopAutoScroll(){
+    scrollEnabled = false; cancelAnimationFrame(scrollRaf);
+    if (listEl) { listEl.classList.remove("scrolling-active"); listEl.scrollTop = 0; }
+  }
+
+  let listScale = 1; let genScale = 1;
+  const BASE_NAME_SIZE   = 26;
+  const BASE_NOTES_SIZE  = 22;
+  const BASE_TICKER_SIZE = 32;
+
+  function applyScalesToDom() {
+    const r = document.documentElement;
+    r.style.setProperty('--name-size',   (BASE_NAME_SIZE   * listScale) + 'px');
+    r.style.setProperty('--notes-size',  (BASE_NOTES_SIZE  * listScale) + 'px');
+    r.style.setProperty('--ticker-size', (BASE_TICKER_SIZE * genScale)  + 'px');
+  }
+
+  /* ── Firebase init ── */
+  let firestore = null;
+  let database  = null;
+  (function initFirebase() {
+    if (typeof firebase === "undefined" || !firebase.initializeApp) {
+      console.warn("[Firebase] SDK not loaded; live data and remote disabled.");
+      return;
+    }
+    const firebaseConfig = {
+      apiKey: "AIzaSyCWAxUm_Z_i-EP_xqayhQrwsL4Qkmh5fMA",
+      authDomain: "slidesync-37cd4.firebaseapp.com",
+      databaseURL: "https://slidesync-37cd4-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "slidesync-37cd4",
+      storageBucket: "slidesync-37cd4.firebasestorage.app",
+      messagingSenderId: "996754972458",
+      appId: "1:996754972458:web:7f8be6880c3463ac6a4853"
+    };
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      database  = firebase.database();
+      firestore = firebase.firestore();
+    } catch (e) {
+      console.warn("[Firebase] init failed:", e);
+    }
+  })();
+
+  /* ── Remote Control ── */
+  let lastProcessedTs = 0;
+  function handleRemoteMsg(msg) {
+    if (!msg) return;
+    const ts = Number(msg.timestamp || 0);
+    if (ts && ts === lastProcessedTs) return;
+    if (ts) lastProcessedTs = ts;
+
+    if (msg.type === "scale") {
+      const delta = Number(msg.value || 0);
+      if (msg.target === "list") listScale = Math.max(0.5, listScale + delta);
+      else if (msg.target === "gen") genScale = Math.max(0.5, genScale + delta);
+      applyScalesToDom();
+    }
+
+    if (msg.type === "fullscreen") {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+    }
+
+    if (msg.type === "autoscroll") {
+      if (msg.op === "toggle") { if (scrollEnabled) stopAutoScroll(); else startAutoScroll(); }
+      if (msg.op === "speed")  { scrollSpeedVal = msg.value; updateTickerSpeed(); if (scrollEnabled) { listEl.scrollTop = 0; scrollCarry = 0; } }
+    }
+  }
+
+  (function initRtdbRemote() {
+    if (!database) return;
+    const remoteRef  = database.ref('prayer_manager/remote_control');
+    const STALE_MS   = 10_000;
+    const connectedAt = Date.now();
+    let firstSnapshot = true;
+
+    remoteRef.on('value', (snap) => {
+      const msg = snap.val();
+      if (!msg) { firstSnapshot = false; return; }
+      if (firstSnapshot) {
+        firstSnapshot = false;
+        const ts = Number(msg.timestamp || 0);
+        if (!ts || (connectedAt - ts) > STALE_MS) return;
+      }
+      handleRemoteMsg(msg);
+    }, (err) => console.warn("[Remote] Firebase listen error:", err));
+
+    console.log("[Remote] Firebase listener active on prayer_manager/remote_control");
+  })();
+
+  if ("BroadcastChannel" in window) {
+    const bc = new BroadcastChannel("kor_prayer_present");
+    bc.onmessage = (ev) => handleRemoteMsg(ev.data);
+  }
+
+  applyScalesToDom();
+  initDataSync();
+</script>
+</body>
+</html>
